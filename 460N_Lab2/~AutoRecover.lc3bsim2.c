@@ -416,61 +416,39 @@ void process_instruction() {
 	*       -Update NEXT_LATCHES
 	*/
 
-	/* Instructions */
 	enum {
-		ADD = 1, AND = 5, BR = 0, XOR = 9, NOT = 9, JMP = 12, RET = 12, JSR = 4, JSRR = 4, LDB = 2, LDW = 6, LEA = 14, LSHF = 13, RSHFL = 13, RSHFA = 13,
-		STB = 3, STW = 7, TRAP = 15
+		ADD = 1, AND = 5, BR = 0
 	};
 
-	
-	/* Bit Masks */
-	enum {
-		reg = 0b111, DR_shift = 9, SR1_shift = 6, SR2_shift = 0, BaseR_shift = 6, bit4 = 0b10000, bit5 = 0b100000, imm5 = 0b11111, sign_extend16 = 0xFFFF0000, sign_bit16 = 0b1000000000000000,
-		sign_bit5 = 0b10000, sign_extend5 = 0xFFFFFFE0, nzpbits_shift = 9, PCoffset9 = 0b111111111, sign_bit9 = 0x100, sign_extend9 = 0xFFFFFE00, amount4 = 0b1111, trapvect8 = 0xFF, sign_bit11 = 0x400,
-		PCoffset11 = 0b11111111111, sign_extend11 = 0xFFFFF800, nzp_shift = 9, nzp_values = 0b111, bit11 = 0x800, offset6 = 0b111111, sign_bit6 = 0b100000, sign_extend6 = 0xFFFFFFC0,
-		sign_bit8 = 0x80, sign_extend8 = 0xFFFFFF00
-
-	};
-
-
-	int instruction = (MEMORY[CURRENT_LATCHES.PC >> 1][1] << 8) | (MEMORY[CURRENT_LATCHES.PC >> 1][0]);
-	int opcode = MEMORY[CURRENT_LATCHES.PC >> 1 ][1] >> 4;
+	int instruction = (MEMORY[CURRENT_LATCHES.PC >> 1][1] << 8) + (MEMORY[CURRENT_LATCHES.PC >>1][0]);
+	int opcode = MEMORY[CURRENT_LATCHES.PC >>1 ][1] >> 4;
+	int result, op1, op2;
 
 
 
-
-	if (opcode == ADD || opcode == AND || opcode == XOR || opcode == NOT) {
-		int result, op1, op2;
+	if (opcode == ADD) {
+		enum {DR = 0b111000000000, SR1 = 0b111000000, SR2 = 0b111, bit5 = 0b100000, imm5 = 0b11111};
 
 
 		/* imm5 */
 		if (instruction & bit5) {
-			op2 = instruction & imm5;
-			op2 = op2 & sign_bit5 ? op2 | sign_extend5 : op2;
+			op2 = CURRENT_LATCHES.REGS[instruction & imm5];
 		}
 		/* SR2 */
 		else {
-			op2 = CURRENT_LATCHES.REGS[(instruction >> SR2_shift) & reg];
-			op2 = op2 & sign_bit16 ? op2 | sign_extend16 : op2;
+			op2 = CURRENT_LATCHES.REGS[instruction & SR2];
 		}
 
-		op1 = CURRENT_LATCHES.REGS[(instruction >> SR1_shift) & reg];
-		op1 = op1 & sign_bit16 ? op1 | sign_extend16 : op1;
+		op1 = CURRENT_LATCHES.REGS[instruction & SR1];
 
-		if (opcode == ADD) {
-			result = op1 + op2;
-		}
-		else if (opcode == AND) {
-			result = op1 & op2;
-		}
-		else if (opcode == XOR) {
-			result = op1 ^ op2;			
-		}
-		
+		result = Low16bits(op1 + op2);
 
 
-		/* Correcting Overflow */
-		result = result & sign_bit16 ? result | sign_extend16 : Low16bits(result);
+
+
+
+
+		NEXT_LATCHES.REGS[instruction & DR] = result;
 
 		if (result < 0) {
 			NEXT_LATCHES.N = 1;
@@ -488,241 +466,18 @@ void process_instruction() {
 			NEXT_LATCHES.P = 1;
 		}
 
-		result = Low16bits(result);
-		NEXT_LATCHES.REGS[(instruction >> DR_shift) & reg] = result;
-		NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
-	}
-	else if (opcode == BR) {
-		int required_nzpBits, current_nzpBits, PC_Offset;
+		NEXT_LATCHES.PC += 2;
+	
 
 
-		required_nzpBits = (instruction >> nzpbits_shift) & nzp_values;
-		current_nzpBits = (CURRENT_LATCHES.N << 2) | (CURRENT_LATCHES.Z << 1) | CURRENT_LATCHES.P;
-		PC_Offset = instruction & PCoffset9;
-		PC_Offset = PC_Offset & sign_bit9 ? PC_Offset | sign_extend9 : PC_Offset;
-		PC_Offset = PC_Offset << 1;
-
-		/* Branch Taken */
-		if (current_nzpBits & required_nzpBits) {
-			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2 + PC_Offset;
-		}
-		/* Branch Not Taken */
-		else {
-			NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
-		}
-	}
-
-	else if (opcode == JMP || opcode == RET) {
-		NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[(instruction >> BaseR_shift) & reg];
-	}
-
-	else if (opcode == JSR || opcode == JSRR) {
-		int TEMP = CURRENT_LATCHES.PC + 2;
-
-		/* JSR */
-		if (instruction & bit11) {
-			int PC_Offset = instruction & PCoffset11;
-			PC_Offset = PC_Offset & sign_bit11 ? PC_Offset | sign_extend11 : PC_Offset;
-			PC_Offset = PC_Offset << 1;
-			NEXT_LATCHES.PC = TEMP + PC_Offset;
-		}
-
-		/* JSRR */
-		else {
-			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[(instruction >> BaseR_shift) & reg];
-		}
-		NEXT_LATCHES.REGS[7] = TEMP;
-	}
-
-	else if (opcode == LDB || opcode == LDW) {
-		int BaseR, offset, result;
-
-		BaseR = CURRENT_LATCHES.REGS[(instruction >> BaseR_shift) & reg];
-		BaseR = (BaseR & sign_bit16) ? BaseR | sign_extend16 : BaseR;
-
-		offset = instruction & offset6;
-		offset = offset & sign_bit6 ? offset | sign_extend6 : offset;
-
-		
-		if (opcode == LDB) {
-
-			/* Even address -> accessing Memory[#][0] */
-			if ((BaseR + offset) % 2 == 0) {
-				result = MEMORY[(Low16bits(BaseR + offset)) >> 1][0];
-			}
-
-			/* Odd address -> accessing Memory[#][1] */
-			else {
-				result = MEMORY[(Low16bits(BaseR + offset)) >> 1][1];
-			}
-
-			result = (result & sign_bit8) ? result | sign_extend8 : result;
-
-		}
-		/* LDW */
-		else {
-			offset = offset << 1;			/* Left Shifting offset by 1 for LDW */
-			result = (MEMORY[(BaseR + offset) >> 1][1] << 8) | MEMORY[(BaseR + offset) >> 1][0];
-			result = (result & sign_bit16) ? result | sign_extend16 : result;
-		}
-
-
-		if (result < 0) {
-			NEXT_LATCHES.N = 1;
-			NEXT_LATCHES.Z = 0;
-			NEXT_LATCHES.P = 0;
-		}
-		else if (result == 0) {
-			NEXT_LATCHES.N = 0;
-			NEXT_LATCHES.Z = 1;
-			NEXT_LATCHES.P = 0;
-		}
-		else if (result > 0) {
-			NEXT_LATCHES.N = 0;
-			NEXT_LATCHES.Z = 0;
-			NEXT_LATCHES.P = 1;
-		}
-
-		result = Low16bits(result);
-		NEXT_LATCHES.REGS[(instruction >> DR_shift) & reg] = result;
-		NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
-	}
-
-	else if (opcode == LEA) {
-		int PC_Offset, result;
-
-		PC_Offset = instruction & PCoffset9;
-		PC_Offset = PC_Offset & sign_bit9 ? PC_Offset | sign_extend9 : PC_Offset;
-
-		result = CURRENT_LATCHES.PC + 2 + (PC_Offset << 1);
-		result = Low16bits(result);
-
-		NEXT_LATCHES.REGS[(instruction >> DR_shift) & reg] = result;
-		NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
-	}
-
-	else if (opcode == LSHF || opcode == RSHFL || opcode == RSHFA) {
-		int result, SR, mask;
-
-		SR = CURRENT_LATCHES.REGS[((instruction >> SR1_shift) & reg)];
-		SR = SR & sign_bit16 ? SR | sign_extend16 : SR;
-		
-
-		if ((instruction & bit4) == 0) {
-			result = SR << (instruction & amount4);
-		}
-		else {
-			int i = 0;
-
-			/* Logical shift right */
-			if ((instruction & bit5) == 0) {
-				mask = 0xFFFF;
-
-				/* Shifting  mask bits to the right by the amount of 0s that should be in front of result */
-				for (i = 0; i < (instruction & amount4); i++) {
-					mask = mask >> 1;
-				}
-
-				result = SR >> (instruction & amount4);		
-				result = result & mask;
-			}
-
-			/* Arithmetic shift right */
-			else {
-
-				/* Preserving sign bit if it's a 1 */
-				if (SR & sign_bit16) {
-					mask = 0x8000;
-
-					for (i = 0; i < (instruction & amount4); i++) {
-						mask = mask >> 1;
-						mask = mask | 0x8000;
-					}
-
-					result = SR >> (instruction & amount4);
-					result = result | mask;
-				}
-
-				/* Preserving sign bit if it's a 0 */
-				else {
-					int i = 0;
-
-					mask = 0xFFFF;
-
-					for (i = 0; i < (instruction & amount4); i++) {
-						mask = mask >> 1;
-					}
-
-					result = SR >> (instruction & amount4);
-					result = result & mask;
-				}
-			}
-		}
-
-		result = (result & sign_bit16) ? result | sign_extend16 : result;
-
-		if (result < 0) {
-			NEXT_LATCHES.N = 1;
-			NEXT_LATCHES.Z = 0;
-			NEXT_LATCHES.P = 0;
-		}
-		else if (result == 0) {
-			NEXT_LATCHES.N = 0;
-			NEXT_LATCHES.Z = 1;
-			NEXT_LATCHES.P = 0;
-		}
-		else if (result > 0) {
-			NEXT_LATCHES.N = 0;
-			NEXT_LATCHES.Z = 0;
-			NEXT_LATCHES.P = 1;
-		}
-
-		result = Low16bits(result);
-		NEXT_LATCHES.REGS[(instruction >> DR_shift) & reg] = result;
-		NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
 	}
 
 
-	else if (opcode == STB || opcode == STW) {
-		int BaseR, offset, result_address;
-
-		BaseR = CURRENT_LATCHES.REGS[(instruction >> BaseR_shift) & reg];
-		BaseR = BaseR & sign_bit16 ? BaseR | sign_extend16 : BaseR;
-
-		offset = instruction & offset6;
-		offset = offset & sign_bit6 ? offset | sign_extend6 : offset;
-
-		if (opcode == STB) {
-			result_address = BaseR + offset;
-			result_address = Low16bits(result_address);
-
-			if ((result_address % 2) == 0) {
-				MEMORY[result_address >> 1][0] = CURRENT_LATCHES.REGS[(instruction >> DR_shift) & reg] & 0xFF;
-			}
-			else {
-				MEMORY[result_address >> 1][1] = CURRENT_LATCHES.REGS[(instruction >> DR_shift) & reg] & 0xFF;
-			}
-		}
-		else {
-			result_address = BaseR + (offset << 1);
-			result_address = Low16bits(result_address);
-
-			MEMORY[result_address >> 1][0] = CURRENT_LATCHES.REGS[(instruction >> DR_shift) & reg] & 0xFF;
-			MEMORY[result_address >> 1][1] = (CURRENT_LATCHES.REGS[(instruction >> DR_shift) & reg] >> 8) & 0xFF;
-		}
 
 
-		NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.PC + 2);
-	}
 
-	else if (opcode == TRAP) {
-		int address;
 
-		NEXT_LATCHES.REGS[7] = Low16bits(CURRENT_LATCHES.PC + 2);
 
-		address = (instruction & trapvect8) << 1;
-		NEXT_LATCHES.PC = (MEMORY[address >> 1][1] << 8) | MEMORY[address >> 1][0];
-	}
 
 
 }
