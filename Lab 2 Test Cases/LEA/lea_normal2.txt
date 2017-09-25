@@ -1,0 +1,8 @@
+.orig x3000
+
+
+LABEL AND R0, R0, #0
+AND R0, R0, #0
+LEA R0, LABEL
+
+.END

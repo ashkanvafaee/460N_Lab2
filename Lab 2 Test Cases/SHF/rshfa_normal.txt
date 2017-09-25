@@ -1,0 +1,15 @@
+.orig x3000
+AND R0,R0, #0
+ADD R0, R0, #1
+LSHF R0,R0, #15
+
+RSHFA R0, R0, #15
+
+AND R0,R0, #0
+ADD R0, R0, #1
+LSHF R0, R0, #1
+
+RSHFA R0, R0, #1
+
+.END
+

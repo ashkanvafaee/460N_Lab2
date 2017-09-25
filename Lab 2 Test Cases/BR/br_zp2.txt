@@ -1,0 +1,15 @@
+.orig x3000
+AND R0, R0, #0
+ADD R0, R0, #-1
+BRzp LABEL
+ADD R0, R0, #1
+AND R2, R2, #0
+AND R2, R2, #0
+AND R2, R2, #0
+AND R2, R2, #0
+AND R2, R2, #0
+AND R2, R2, #0
+AND R2, R2, #0
+LABEL ADD R0, R0, #9
+
+.END

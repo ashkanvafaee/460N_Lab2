@@ -1,0 +1,7 @@
+.orig x3000
+
+LEA R0, LABEL
+AND R0, R0, #0
+LABEL .FILL x4000
+
+.END

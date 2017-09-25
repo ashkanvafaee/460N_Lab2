@@ -1,0 +1,6 @@
+.orig x3000
+ ADD R0, R0, R1
+LABEL LEA R0, LABEL
+LDB R1, R0, #-1
+LDB R2, R0, #-2
+.END

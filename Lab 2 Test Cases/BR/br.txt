@@ -1,0 +1,24 @@
+.orig x3000
+
+AND R0, R0, #0
+BR LABEL
+
+AND R7, R7, #0
+AND R7, R7, #0
+
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+AND R7, R7, #0
+
+LABEL ADD R7, R7, #1
+AND R7, R7, #0
+
+.END

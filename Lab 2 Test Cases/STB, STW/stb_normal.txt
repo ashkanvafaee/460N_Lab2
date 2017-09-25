@@ -1,0 +1,26 @@
+.orig x3100
+AND R0,R0, #0
+LEA R0, LOC1
+LDW R0,R0, #0
+
+AND R1, R1, #0
+ADD R1, R1, #1
+
+STB R1, R0, #-1
+STB R1, R0, #0
+STB R1, R0, #1
+
+LEA R0, LOC2
+LDW R0, R0, #0
+
+STB R1, R0, #-1
+STB R1, R0, #0
+STB R1, R0, #1
+
+
+
+
+
+LOC1 .FILL x3002
+LOC2 .FILL x4002
+.end
