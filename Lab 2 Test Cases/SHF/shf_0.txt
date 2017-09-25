@@ -1,0 +1,15 @@
+.orig x3000
+AND R0, R0, #0
+LEA R0, LABEL
+LDW R0, R0, #0
+
+LSHF R1, R0, #0
+RSHFA R2, R0, #0
+RSHFL R3, R0, #0
+
+
+
+
+
+LABEL .FILL x0FF0
+.END

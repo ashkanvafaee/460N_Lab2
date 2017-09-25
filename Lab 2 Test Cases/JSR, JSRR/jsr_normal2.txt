@@ -1,0 +1,14 @@
+.orig x3000
+LABEL AND R0, R0, #0
+JSR LABEL
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+AND R0, R0, #0
+ADD R0, R0, #1
+
+.END

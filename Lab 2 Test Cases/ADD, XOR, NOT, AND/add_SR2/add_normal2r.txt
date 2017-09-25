@@ -1,0 +1,7 @@
+.orig x3000
+AND R0, R0, #0
+AND R1, R1, #0
+ADD R0, R0, #-5
+ADD R1, R1, #-15
+ADD R2, R1, R0
+.END

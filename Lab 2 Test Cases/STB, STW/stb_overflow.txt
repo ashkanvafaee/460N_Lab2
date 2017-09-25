@@ -1,0 +1,15 @@
+.orig x3000
+ADD R1, R1, #1
+
+LEA R0, LABEL
+LDW R0, R0, #0
+
+STB R1, R0, #-1
+STB R1, R0, #0
+STB R1, R0, #1
+
+
+
+
+LABEL .FILL xFFFF
+.END
